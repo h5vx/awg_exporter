@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -354,6 +355,11 @@ func (e *Exporter) Run() {
    ========================= */
 
 func main() {
+	// Soft heap cap so GC runs before RSS grows; override with GOMEMLIMIT env.
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(10 << 20)
+	}
+
 	cfg := Config{
 		ScrapeInterval:      time.Duration(getEnvInt("AWG_EXPORTER_SCRAPE_INTERVAL", 60)) * time.Second,
 		HTTPPort:            getEnvInt("AWG_EXPORTER_HTTP_PORT", 9351),
