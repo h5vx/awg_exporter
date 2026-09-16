@@ -1,0 +1,13 @@
+# User unit: install to ~/.config/systemd/user/ (or /etc/systemd/user/ for all users)
+# and enable with: systemctl --user enable --now awg-exporter
+# The user must have access to the docker socket (e.g. be in the docker group).
+[Unit]
+Description=AmneziaWG Exporter
+
+[Service]
+EnvironmentFile=/etc/awg-exporter
+ExecStart=/usr/local/bin/awg-exporter
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
