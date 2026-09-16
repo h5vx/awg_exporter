@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -239,8 +238,8 @@ func (e *Exporter) runAwgShow() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if code != 0 {
-		return "", errors.New(stderr)
+	if code != 0 || stdout == "" {
+		return "", fmt.Errorf("%v exited with code %d, stdout %d bytes, stderr: %q", e.cfg.AwgCmd, code, len(stdout), stderr)
 	}
 	return stdout, nil
 }
@@ -277,6 +276,7 @@ func (e *Exporter) Update() {
 	peers := parseAwgShow(out)
 	if len(peers) == 0 {
 		e.status.Set(0)
+		log.Printf("awg show parse error: no peers found in output (%d bytes):\n%s", len(out), out)
 		e.nErrors.WithLabelValues("awg_show_parse").Add(1.0)
 		return
 	}
