@@ -7,6 +7,8 @@ Defaults are read from defaults.toml next to this file; every key can be
 overridden with `--data key=value`. See deploy/README.md.
 """
 
+import re
+import sys
 import tomllib
 from pathlib import Path
 
@@ -17,6 +19,9 @@ from pyinfra.operations.util import any_changed
 
 DEPLOY_DIR = Path(__file__).resolve().parent
 REPO_DIR = DEPLOY_DIR.parent
+
+sys.path.insert(0, str(DEPLOY_DIR))
+from certs import ensure_cert  # noqa: E402
 
 # Exporter settings: deploy key -> environment variable read by the exporter
 ENV_VARS = {
@@ -54,6 +59,42 @@ def as_list(value):
     return list(value)
 
 
+def local_path(value):
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else REPO_DIR / path
+
+
+def tls_source_files():
+    """Return local (cert, key) paths to install, generating them if requested."""
+    if cfg["tls_generate"]:
+        if cfg["tls_cert"] or cfg["tls_key"]:
+            raise SystemExit("tls_generate cannot be combined with tls_cert/tls_key")
+        if not (cfg["tls_ca_cert"] and cfg["tls_ca_key"]):
+            raise SystemExit("tls_generate requires tls_ca_cert and tls_ca_key")
+
+        names = as_list(cfg["tls_san"]) or [host.data.get("ssh_hostname") or host.name]
+        cache_dir = local_path(cfg["tls_cache_dir"]) / re.sub(r"[^\w.-]", "_", host.name)
+        try:
+            return ensure_cert(
+                cache_dir,
+                local_path(cfg["tls_ca_cert"]),
+                local_path(cfg["tls_ca_key"]),
+                cfg["tls_ca_key_password"],
+                names,
+                int(cfg["tls_days"]),
+            )
+        except (OSError, ValueError, TypeError) as e:
+            raise SystemExit(f"Cannot issue TLS certificate: {e}")
+
+    if not (cfg["tls_cert"] and cfg["tls_key"]):
+        raise SystemExit("tls_enabled requires tls_cert and tls_key, or tls_generate with a CA")
+    cert, key = local_path(cfg["tls_cert"]), local_path(cfg["tls_key"])
+    for path in (cert, key):
+        if not path.is_file():
+            raise SystemExit(f"TLS file not found: {path}")
+    return cert, key
+
+
 cfg = load_settings()
 
 if bool(cfg["http_auth_user"]) != bool(cfg["http_auth_password"]):
@@ -64,6 +105,12 @@ env = {
     for key, var in ENV_VARS.items()
     if cfg.get(key) not in (None, "")
 }
+
+tls_src = tls_source_files() if cfg["tls_enabled"] else None
+if tls_src:
+    tls_dir = cfg["tls_dest_dir"].rstrip("/")
+    env["AWG_EXPORTER_TLS_CERT_FILE"] = env_value(f"{tls_dir}/cert.pem")
+    env["AWG_EXPORTER_TLS_KEY_FILE"] = env_value(f"{tls_dir}/key.pem")
 
 binary_src = Path(cfg["binary_src"])
 if not binary_src.is_absolute():
@@ -86,6 +133,38 @@ if service_user != "root":
         shell="/usr/sbin/nologin",
         create_home=False,
         groups=as_list(cfg["service_groups"]),
+    )
+
+# The service user needs to read the TLS key
+service_group = service_user if service_user != "root" else "root"
+tls_changes = []
+if tls_src:
+    files.directory(
+        name="Create TLS directory",
+        path=tls_dir,
+        user="root",
+        group=service_group,
+        mode="750",
+    )
+    tls_changes.append(
+        files.put(
+            name="Install TLS certificate",
+            src=str(tls_src[0]),
+            dest=f"{tls_dir}/cert.pem",
+            user="root",
+            group=service_group,
+            mode="644",
+        )
+    )
+    tls_changes.append(
+        files.put(
+            name="Install TLS key",
+            src=str(tls_src[1]),
+            dest=f"{tls_dir}/key.pem",
+            user="root",
+            group=service_group,
+            mode="640",
+        )
     )
 
 binary = files.put(
@@ -135,5 +214,5 @@ systemd.service(
     name="Restart awg-exporter on changes",
     service=f"{service_name}.service",
     restarted=True,
-    _if=any_changed(binary, config, unit),
+    _if=any_changed(binary, config, unit, *tls_changes),
 )

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -182,6 +183,8 @@ type Config struct {
 	ContainerName       string
 	HTTPAuthUser        string
 	HTTPAuthPassword    string
+	TLSCertFile         string
+	TLSKeyFile          string
 }
 
 // basicAuth wraps h with HTTP basic authentication against a single user.
@@ -353,14 +356,18 @@ func (e *Exporter) Run() {
 			httpHandler = basicAuth(httpHandler, e.cfg.HTTPAuthUser, e.cfg.HTTPAuthPassword)
 			log.Printf("HTTP basic auth enabled for user %q", e.cfg.HTTPAuthUser)
 		}
-		log.Printf("Server is running on %s:%d", e.cfg.HTTPHost, e.cfg.HTTPPort)
+		srv := &http.Server{
+			Addr:      fmt.Sprintf("%s:%d", e.cfg.HTTPHost, e.cfg.HTTPPort),
+			Handler:   httpHandler,
+			TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+		}
 		go func() {
-			log.Fatal(
-				http.ListenAndServe(
-					fmt.Sprintf("%s:%d", e.cfg.HTTPHost, e.cfg.HTTPPort),
-					httpHandler,
-				),
-			)
+			if e.cfg.TLSCertFile != "" {
+				log.Printf("Server is running on https://%s", srv.Addr)
+				log.Fatal(srv.ListenAndServeTLS(e.cfg.TLSCertFile, e.cfg.TLSKeyFile))
+			}
+			log.Printf("Server is running on http://%s", srv.Addr)
+			log.Fatal(srv.ListenAndServe())
 		}()
 	}
 
@@ -400,10 +407,15 @@ func main() {
 		ContainerName:       getEnv("AWG_CONTAINER_NAME", "amnezia-awg"),
 		HTTPAuthUser:        getEnv("AWG_EXPORTER_HTTP_AUTH_USER", ""),
 		HTTPAuthPassword:    getEnv("AWG_EXPORTER_HTTP_AUTH_PASSWORD", ""),
+		TLSCertFile:         getEnv("AWG_EXPORTER_TLS_CERT_FILE", ""),
+		TLSKeyFile:          getEnv("AWG_EXPORTER_TLS_KEY_FILE", ""),
 	}
 
 	if (cfg.HTTPAuthUser == "") != (cfg.HTTPAuthPassword == "") {
 		log.Fatal("AWG_EXPORTER_HTTP_AUTH_USER and AWG_EXPORTER_HTTP_AUTH_PASSWORD must be set together")
+	}
+	if (cfg.TLSCertFile == "") != (cfg.TLSKeyFile == "") {
+		log.Fatal("AWG_EXPORTER_TLS_CERT_FILE and AWG_EXPORTER_TLS_KEY_FILE must be set together")
 	}
 
 	log.Printf("Amnezia WG exporter started in %s mode", cfg.OpsMode)

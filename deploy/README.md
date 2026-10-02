@@ -41,7 +41,43 @@ and how the service is installed. List values are passed comma-separated: `--dat
 
 HTTP basic auth is enabled when both `http_auth_user` and `http_auth_password` are set.
 The config file is installed with mode 600 since it may contain the password. Keep in
-mind that `--data` values end up in shell history; with plain HTTP the credentials are
-sent unencrypted, so don't expose the port to untrusted networks without TLS in front.
+mind that `--data` values end up in shell history; without TLS the credentials are
+sent unencrypted, so enable TLS (see below) before exposing the port.
 
-The service is restarted only when the binary, config or unit changed.
+## TLS
+
+Enable with `tls_enabled=true` and either upload an existing certificate:
+
+```sh
+pyinfra HOST deploy/deploy.py --ssh-user root --data tls_enabled=true \
+    --data tls_cert=path/to/fullchain.pem --data tls_key=path/to/key.pem
+```
+
+or let the deploy issue one signed by your CA:
+
+```sh
+pyinfra HOST deploy/deploy.py --ssh-user root --data tls_enabled=true \
+    --data tls_generate=true \
+    --data tls_ca_cert=path/to/ca.pem --data tls_ca_key=path/to/ca.key \
+    [--data tls_ca_key_password=...] [--data tls_san=metrics.example.com,203.0.113.7] [--data tls_days=365]
+```
+
+The certificate (ECDSA P-256, `serverAuth`) is generated locally, so the CA key never leaves
+your machine. SANs default to the host address passed to pyinfra. If the CA is an intermediate,
+it is included in the served chain. Generated certificates are cached in `deploy/certs/<host>/`
+(git-ignored) and reused until the CA or SANs change or less than 30 days of validity remain,
+so repeated deploys don't restart the service needlessly.
+
+On the host the files go to `tls_dest_dir` (`/etc/ssl/awg-exporter`); the key is readable only
+by root and the service group. Prometheus then scrapes with:
+
+```yaml
+scheme: https
+tls_config:
+  ca_file: /path/to/ca.pem
+```
+
+Setting `tls_enabled=false` switches the exporter back to plain HTTP; installed certificate files
+are left in place.
+
+The service is restarted only when the binary, config, unit or TLS files changed.

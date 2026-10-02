@@ -28,6 +28,28 @@ ops_mode = "http"
 http_auth_user = ""
 http_auth_password = ""
 
+# --- TLS ---
+# Paths on the local machine; relative ones are resolved from the repo root.
+
+tls_enabled = false
+# Directory on the host where the certificate and key are installed
+tls_dest_dir = "/etc/ssl/awg-exporter"
+
+# Either upload an existing certificate (PEM, full chain) and key ...
+tls_cert = ""
+tls_key = ""
+
+# ... or generate one signed by the given CA (the CA key stays local)
+tls_generate = false
+tls_ca_cert = ""
+tls_ca_key = ""
+tls_ca_key_password = ""
+# DNS names / IPs for the certificate; empty = the host address used for SSH
+tls_san = []
+tls_days = 365
+# Generated certificates are cached here, one subdirectory per host
+tls_cache_dir = "deploy/certs"
+
 # Docker container running AmneziaWG
 container_name = "amnezia-awg"
 awg_show_exec = "wg show all"

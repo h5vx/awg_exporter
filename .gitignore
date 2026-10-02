@@ -1,3 +1,4 @@
 /awg-exporter
 *.bak
-
+/deploy/certs/
+__pycache__/

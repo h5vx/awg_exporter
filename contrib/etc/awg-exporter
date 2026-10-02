@@ -12,6 +12,10 @@ AWG_EXPORTER_OPS_MODE=http
 #AWG_EXPORTER_HTTP_AUTH_USER=prometheus
 #AWG_EXPORTER_HTTP_AUTH_PASSWORD=changeme
 
+# Optional TLS (PEM files); HTTPS is served when both are set
+#AWG_EXPORTER_TLS_CERT_FILE=/etc/ssl/awg-exporter/cert.pem
+#AWG_EXPORTER_TLS_KEY_FILE=/etc/ssl/awg-exporter/key.pem
+
 # Docker container running AmneziaWG
 AWG_CONTAINER_NAME=amnezia-awg
 AWG_EXPORTER_AWG_SHOW_EXEC="wg show all"
