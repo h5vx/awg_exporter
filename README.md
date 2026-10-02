@@ -112,3 +112,7 @@ scrape_configs:
 
 [`contrib/grafana/dashboards/awg-exporter.json`](contrib/grafana/dashboards/awg-exporter.json)
 is a dashboard with active clients, traffic totals and rates per client, and exporter errors.
+
+## License
+
+[MIT](LICENSE)
