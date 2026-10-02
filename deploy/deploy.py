@@ -107,6 +107,15 @@ env = {
     if cfg.get(key) not in (None, "")
 }
 
+# TLS options without tls_enabled would be silently ignored, leaving plain HTTP
+tls_options = [
+    key
+    for key in ("tls_generate", "tls_cert", "tls_key", "tls_ca_cert", "tls_ca_key")
+    if cfg[key]
+]
+if tls_options and not cfg["tls_enabled"]:
+    raise SystemExit(f"{', '.join(tls_options)} set but tls_enabled is false; add --data tls_enabled=true")
+
 tls_src = tls_source_files() if cfg["tls_enabled"] else None
 if tls_src:
     tls_dir = cfg["tls_dest_dir"].rstrip("/")

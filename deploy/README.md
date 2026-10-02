@@ -85,7 +85,8 @@ tls_config:
   ca_file: /path/to/ca.pem
 ```
 
-Setting `tls_enabled=false` switches the exporter back to plain HTTP; installed certificate files
+Any other `tls_*` certificate option without `tls_enabled=true` is an error, so a typo can't
+silently leave the exporter on plain HTTP. Setting `tls_enabled=false` switches the exporter back to plain HTTP; installed certificate files
 are left in place.
 
 The service is restarted only when the binary, config, unit or TLS files changed.
