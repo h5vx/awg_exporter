@@ -1,0 +1,20 @@
+# Managed by pyinfra (deploy/deploy.py). Manual changes will be overwritten.
+[Unit]
+Description=AmneziaWG Exporter
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+EnvironmentFile={{ config_dest }}
+ExecStart={{ binary_dest }}
+User={{ service_user }}
+{% if service_user != "root" -%}
+Group={{ service_user }}
+{% endif -%}
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

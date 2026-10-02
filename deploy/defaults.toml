@@ -1,0 +1,39 @@
+# Default settings for the awg-exporter deploy.
+# Any key can be overridden from the command line: --data key=value
+
+# --- Installation ---
+
+# Local path to the exporter binary (relative paths are resolved from the repo root)
+binary_src = "awg-exporter"
+binary_dest = "/usr/local/bin/awg-exporter"
+config_dest = "/etc/awg-exporter"
+service_name = "awg-exporter"
+
+# User the service runs as. It is created as a system user and added to
+# `service_groups` (docker socket access is required). Use "root" to skip creating it.
+service_user = "awg-exporter"
+service_groups = ["docker"]
+
+# --- Exporter settings (rendered into the EnvironmentFile) ---
+
+# Seconds between `awg show` polls
+scrape_interval = 60
+
+# Metrics HTTP listener (only in "http" mode)
+http_host = "127.0.0.1"
+http_port = 9351
+ops_mode = "http"
+
+# Docker container running AmneziaWG
+container_name = "amnezia-awg"
+awg_show_exec = "wg show all"
+
+# Resolve peer keys to client names via the Amnezia clients table inside the container
+clients_table_enabled = true
+clients_table_file = "/opt/amnezia/awg/clientsTable"
+
+# Docker socket; empty = exporter default (unix:///var/run/docker.sock)
+docker_host = ""
+
+# Go soft memory limit; empty = exporter default (10MiB)
+gomemlimit = ""
