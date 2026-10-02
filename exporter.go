@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -178,6 +180,29 @@ type Config struct {
 	ClientsTableFile    string
 	AwgCmd              []string
 	ContainerName       string
+	HTTPAuthUser        string
+	HTTPAuthPassword    string
+}
+
+// basicAuth wraps h with HTTP basic authentication against a single user.
+func basicAuth(h http.Handler, user, password string) http.Handler {
+	userHash := sha256.Sum256([]byte(user))
+	passHash := sha256.Sum256([]byte(password))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, p, ok := r.BasicAuth()
+		uh := sha256.Sum256([]byte(u))
+		ph := sha256.Sum256([]byte(p))
+		// Compare both hashes unconditionally so timing doesn't reveal which one mismatched
+		userOK := subtle.ConstantTimeCompare(uh[:], userHash[:]) == 1
+		passOK := subtle.ConstantTimeCompare(ph[:], passHash[:]) == 1
+		if !ok || !userOK || !passOK {
+			w.Header().Set("WWW-Authenticate", `Basic realm="awg-exporter", charset="UTF-8"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func NewExporter(cfg Config) *Exporter {
@@ -323,7 +348,11 @@ func (e *Exporter) Update() {
 
 func (e *Exporter) Run() {
 	if e.cfg.OpsMode == "http" {
-		httpHandler := promhttp.HandlerFor(e.registry, promhttp.HandlerOpts{})
+		var httpHandler http.Handler = promhttp.HandlerFor(e.registry, promhttp.HandlerOpts{})
+		if e.cfg.HTTPAuthUser != "" {
+			httpHandler = basicAuth(httpHandler, e.cfg.HTTPAuthUser, e.cfg.HTTPAuthPassword)
+			log.Printf("HTTP basic auth enabled for user %q", e.cfg.HTTPAuthUser)
+		}
 		log.Printf("Server is running on %s:%d", e.cfg.HTTPHost, e.cfg.HTTPPort)
 		go func() {
 			log.Fatal(
@@ -369,6 +398,12 @@ func main() {
 		ClientsTableFile:    getEnv("AWG_EXPORTER_CLIENTS_TABLE_FILE", "/opt/amnezia/awg/clientsTable"),
 		AwgCmd:              strings.Split(getEnv("AWG_EXPORTER_AWG_SHOW_EXEC", "wg show all"), " "),
 		ContainerName:       getEnv("AWG_CONTAINER_NAME", "amnezia-awg"),
+		HTTPAuthUser:        getEnv("AWG_EXPORTER_HTTP_AUTH_USER", ""),
+		HTTPAuthPassword:    getEnv("AWG_EXPORTER_HTTP_AUTH_PASSWORD", ""),
+	}
+
+	if (cfg.HTTPAuthUser == "") != (cfg.HTTPAuthPassword == "") {
+		log.Fatal("AWG_EXPORTER_HTTP_AUTH_USER and AWG_EXPORTER_HTTP_AUTH_PASSWORD must be set together")
 	}
 
 	log.Printf("Amnezia WG exporter started in %s mode", cfg.OpsMode)

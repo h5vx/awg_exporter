@@ -8,6 +8,10 @@ AWG_EXPORTER_HTTP_HOST=127.0.0.1
 AWG_EXPORTER_HTTP_PORT=9351
 AWG_EXPORTER_OPS_MODE=http
 
+# Optional HTTP basic auth; enabled when both are set
+#AWG_EXPORTER_HTTP_AUTH_USER=prometheus
+#AWG_EXPORTER_HTTP_AUTH_PASSWORD=changeme
+
 # Docker container running AmneziaWG
 AWG_CONTAINER_NAME=amnezia-awg
 AWG_EXPORTER_AWG_SHOW_EXEC="wg show all"

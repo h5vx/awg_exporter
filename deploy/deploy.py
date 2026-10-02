@@ -24,6 +24,8 @@ ENV_VARS = {
     "http_host": "AWG_EXPORTER_HTTP_HOST",
     "http_port": "AWG_EXPORTER_HTTP_PORT",
     "ops_mode": "AWG_EXPORTER_OPS_MODE",
+    "http_auth_user": "AWG_EXPORTER_HTTP_AUTH_USER",
+    "http_auth_password": "AWG_EXPORTER_HTTP_AUTH_PASSWORD",
     "container_name": "AWG_CONTAINER_NAME",
     "awg_show_exec": "AWG_EXPORTER_AWG_SHOW_EXEC",
     "clients_table_enabled": "AWG_EXPORTER_CLIENTS_TABLE_ENABLED",
@@ -53,6 +55,9 @@ def as_list(value):
 
 
 cfg = load_settings()
+
+if bool(cfg["http_auth_user"]) != bool(cfg["http_auth_password"]):
+    raise SystemExit("http_auth_user and http_auth_password must be set together")
 
 env = {
     var: env_value(cfg[key])
@@ -98,7 +103,7 @@ config = files.template(
     dest=cfg["config_dest"],
     user="root",
     group="root",
-    mode="644",
+    mode="600",
     env=env,
 )
 

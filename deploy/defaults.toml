@@ -24,6 +24,10 @@ http_host = "127.0.0.1"
 http_port = 9351
 ops_mode = "http"
 
+# Optional HTTP basic auth; enabled when both are set
+http_auth_user = ""
+http_auth_password = ""
+
 # Docker container running AmneziaWG
 container_name = "amnezia-awg"
 awg_show_exec = "wg show all"

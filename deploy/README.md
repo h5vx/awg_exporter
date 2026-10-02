@@ -39,4 +39,9 @@ are omitted so the exporter's built-in default applies. Installation settings (`
 `binary_dest`, `config_dest`, `service_name`, `service_user`, `service_groups`) control where
 and how the service is installed. List values are passed comma-separated: `--data service_groups=docker,adm`.
 
+HTTP basic auth is enabled when both `http_auth_user` and `http_auth_password` are set.
+The config file is installed with mode 600 since it may contain the password. Keep in
+mind that `--data` values end up in shell history; with plain HTTP the credentials are
+sent unencrypted, so don't expose the port to untrusted networks without TLS in front.
+
 The service is restarted only when the binary, config or unit changed.
