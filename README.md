@@ -113,6 +113,11 @@ scrape_configs:
 [`contrib/grafana/dashboards/awg-exporter.json`](contrib/grafana/dashboards/awg-exporter.json)
 is a dashboard with active clients, traffic totals and rates per client, and exporter errors.
 
+The exporter refreshes its data once per `AWG_EXPORTER_SCRAPE_INTERVAL` (60s), so a Prometheus scrape
+interval of 1m is enough. Rate panels use a 2m minimum interval so that `rate()` always sees at
+least two samples at that scrape interval. If you scrape less often, set the Prometheus datasource's
+*Scrape interval* in Grafana to match, otherwise those panels show "No data" on short time ranges.
+
 ## License
 
 [MIT](LICENSE)

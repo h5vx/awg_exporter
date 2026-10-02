@@ -490,7 +490,8 @@
           "sort": "none"
         }
       },
-      "description": "RX above zero, TX below zero"
+      "description": "RX above zero, TX below zero",
+      "interval": "2m"
     },
     {
       "id": 8,
@@ -816,7 +817,8 @@
           "hideZeros": true
         }
       },
-      "description": "RX + TX per client, stacked"
+      "description": "RX + TX per client, stacked",
+      "interval": "2m"
     },
     {
       "id": 13,
@@ -967,7 +969,8 @@
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "interval": "2m"
         }
       ]
     }
