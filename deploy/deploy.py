@@ -21,6 +21,7 @@ DEPLOY_DIR = Path(__file__).resolve().parent
 REPO_DIR = DEPLOY_DIR.parent
 
 sys.path.insert(0, str(DEPLOY_DIR))
+from builder import ensure_binary  # noqa: E402
 from certs import ensure_cert  # noqa: E402
 
 # Exporter settings: deploy key -> environment variable read by the exporter
@@ -112,11 +113,10 @@ if tls_src:
     env["AWG_EXPORTER_TLS_CERT_FILE"] = env_value(f"{tls_dir}/cert.pem")
     env["AWG_EXPORTER_TLS_KEY_FILE"] = env_value(f"{tls_dir}/key.pem")
 
-binary_src = Path(cfg["binary_src"])
-if not binary_src.is_absolute():
-    binary_src = REPO_DIR / binary_src
+binary_src = local_path(cfg["binary_src"])
+ensure_binary(REPO_DIR, binary_src, cfg["build"])
 if not binary_src.is_file():
-    raise SystemExit(f"awg-exporter binary not found: {binary_src} (build it first or set --data binary_src=...)")
+    raise SystemExit(f"awg-exporter binary not found: {binary_src}")
 
 arch = host.get_fact(Arch)
 if arch not in ("x86_64", "amd64"):

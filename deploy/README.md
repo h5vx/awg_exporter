@@ -6,7 +6,7 @@ systemd service: system user, binary, `/etc/awg-exporter` env file and unit.
 ## Requirements
 
 - Locally: Python 3.11+, `pip install -r deploy/requirements.txt`
-- The exporter binary built in the repo root (`./build.sh`)
+- Docker, to build the exporter binary (or a prebuilt binary with `--data build=never`)
 - Remote: x86_64 Linux with systemd and Docker (AmneziaWG container)
 
 ## Usage
@@ -20,6 +20,14 @@ pyinfra HOST deploy/deploy.py --ssh-user USER [--ssh-port 22] [--ssh-key ~/.ssh/
 `--sudo` is needed when connecting as a non-root user (plus `--use-sudo-password`
 if sudo asks for a password). Several hosts: `pyinfra host1,host2 ...`. Preview changes
 without applying them: add `--dry`.
+
+## Build
+
+By default (`build=auto`) the deploy runs `./build.sh` when any Go source, `go.mod`, `go.sum`,
+`Dockerfile` or `build.sh` is newer than the `awg-exporter` binary in the repo root, so a stale
+binary is never shipped. `build=always` rebuilds on every run (once, regardless of the number of
+hosts); `build=never` deploys `binary_src` as is, e.g. a binary built in CI. The build runs even
+with `--dry`.
 
 ## Settings
 

@@ -5,6 +5,11 @@
 
 # Local path to the exporter binary (relative paths are resolved from the repo root)
 binary_src = "awg-exporter"
+# Build the binary with build.sh (needs Docker) before deploying:
+#   auto   - when sources are newer than the binary or it is missing
+#   always - on every run (once per run, not per host)
+#   never  - deploy binary_src as is (required for a custom binary_src)
+build = "auto"
 binary_dest = "/usr/local/bin/awg-exporter"
 config_dest = "/etc/awg-exporter"
 service_name = "awg-exporter"
